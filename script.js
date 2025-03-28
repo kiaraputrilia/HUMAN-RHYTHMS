@@ -78,7 +78,7 @@ document.getElementById("touch-area").addEventListener("touchend", (event) => {
         if (activeTouches[id]) {
             clearInterval(activeTouches[id].interval);
             activeTouches[id].audio.pause();
-            delete activeTouches[id];
+            delete activeTouches[id]; // Only delete the touch entry, keep the image on the screen
         }
     }
 });

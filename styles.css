@@ -19,6 +19,7 @@ h1 {
     transform: translateX(-50%);
     font-size: 24px;
     letter-spacing: 2px;
+    z-index: 10; /* Ensure h1 is above the images */
 }
 
 #touch-area {
@@ -35,4 +36,5 @@ h1 {
     transform-origin: center;
     pointer-events: none;
     object-fit: contain; /* Ensures images don’t get squished */
+    z-index: 5; /* Ensure images are below h1 */
 }
