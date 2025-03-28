@@ -1,16 +1,16 @@
 const sounds = {
-    "beep.png": ["beep.mp3"],
-    "car.png": ["car.mp3"],
-    "carHorn.png": ["carHorn1.mp3", "carHorn2.mp3"], // Two random options
-    "chatter.png": ["chatter1.mp3"],
-    "construction.png": ["construction.mp3"],
-    "dog.png": ["dog.mp3"],
-    "drilling.png": ["drilling.mp3"],
-    "keys.png": ["keys.mp3"],
-    "motorcycle.png": ["motorcycle.mp3"],
-    "siren.png": ["siren.mp3"],
-    "truck.png": ["truck.mp3"],
-    "upstairs.png": ["upstairs.mp3"]
+    "beep.png": "beep.mp3",
+    "car.png": "car.mp3",
+    "carHorn.png": "carHorn.mp3",
+    "chatter.png": "chatter1.mp3",
+    "construction.png": "construction.mp3",
+    "dog.png": "dog.mp3",
+    "drilling.png": "drilling.mp3",
+    "keys.png": "keys.mp3",
+    "motorcycle.png": "motorcycle.mp3",
+    "siren.png": "siren.mp3",
+    "truck.png": "truck.mp3",
+    "upstairs.png": "upstairs.mp3"
 };
 
 const images = Object.keys(sounds);
@@ -28,10 +28,7 @@ document.getElementById("touch-area").addEventListener("touchstart", (event) => 
         if (!activeTouches[id]) {
             const index = Math.floor(Math.random() * images.length);
             const imgSrc = images[index];
-
-            // Pick a random sound from the array of possible sounds for this image
-            const soundOptions = sounds[imgSrc];
-            const audioSrc = soundOptions[Math.floor(Math.random() * soundOptions.length)];
+            const audioSrc = sounds[imgSrc];
 
             const img = document.createElement("img");
             img.src = imgSrc;
@@ -44,7 +41,7 @@ document.getElementById("touch-area").addEventListener("touchstart", (event) => 
             img.style.top = `${y - 20}px`; // Center it
             document.body.appendChild(img);
 
-            const audio = new Audio(audioSrc);
+            const audio = new Audio(audioSrc); // Create a new audio instance for each touch
             audio.loop = true;
             audio.volume = 0.2;
 
@@ -70,7 +67,7 @@ document.getElementById("touch-area").addEventListener("touchstart", (event) => 
                 }, 50),
             };
 
-            audio.play();
+            audio.play(); // Play the audio for this touch
         }
     }
 });
