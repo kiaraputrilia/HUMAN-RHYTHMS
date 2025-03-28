@@ -1,16 +1,16 @@
 const sounds = {
-    "beep.png": "beep.mp3",
-    "car.png": "car.mp3",
-    "carHorn.png": "carHorn.mp3",
-    "chatter.png": "chatter1.mp3",
-    "construction.png": "construction.mp3",
-    "dog.png": "dog.mp3",
-    "drilling.png": "drilling.mp3",
-    "keys.png": "keys.mp3",
-    "motorcycle.png": "motorcycle.mp3",
-    "siren.png": "siren.mp3",
-    "truck.png": "truck.mp3",
-    "upstairs.png": "upstairs.mp3"
+    "beep.png": ["beep.mp3"],
+    "car.png": ["car.mp3"],
+    "carHorn.png": ["carHorn1.mp3", "carHorn2.mp3"], // Two random options
+    "chatter.png": ["chatter1.mp3"],
+    "construction.png": ["construction.mp3"],
+    "dog.png": ["dog.mp3"],
+    "drilling.png": ["drilling.mp3"],
+    "keys.png": ["keys.mp3"],
+    "motorcycle.png": ["motorcycle.mp3"],
+    "siren.png": ["siren.mp3"],
+    "truck.png": ["truck.mp3"],
+    "upstairs.png": ["upstairs.mp3"]
 };
 
 const images = Object.keys(sounds);
@@ -19,6 +19,7 @@ const maxSize = 1000;
 const growthRate = 80;
 
 document.getElementById("touch-area").addEventListener("touchstart", (event) => {
+    event.preventDefault(); // Prevent default touch behaviors like scrolling
     for (let touch of event.touches) {
         const id = touch.identifier;
         const x = touch.clientX;
@@ -27,7 +28,10 @@ document.getElementById("touch-area").addEventListener("touchstart", (event) => 
         if (!activeTouches[id]) {
             const index = Math.floor(Math.random() * images.length);
             const imgSrc = images[index];
-            const audioSrc = sounds[imgSrc];
+
+            // Pick a random sound from the array of possible sounds for this image
+            const soundOptions = sounds[imgSrc];
+            const audioSrc = soundOptions[Math.floor(Math.random() * soundOptions.length)];
 
             const img = document.createElement("img");
             img.src = imgSrc;
@@ -44,8 +48,8 @@ document.getElementById("touch-area").addEventListener("touchstart", (event) => 
             audio.loop = true;
             audio.volume = 0.2;
 
-            let rotationAngle = 0; // Track rotation
-            const spinSpeed = Math.random() * 6 + 2; // Random speed between 2-8 degrees per frame
+            let rotationAngle = 0; 
+            const spinSpeed = Math.random() * 6 + 2; 
 
             activeTouches[id] = {
                 img,
@@ -57,11 +61,9 @@ document.getElementById("touch-area").addEventListener("touchstart", (event) => 
                     let newSize = Math.min(40 + duration * growthRate, maxSize);
                     audio.volume = Math.min(1, 0.2 + duration * 0.1);
 
-                    // Make it spin while pressing
                     rotationAngle += spinSpeed;
                     img.style.transform = `rotate(${rotationAngle}deg)`;
 
-                    // Adjust position to keep it centered
                     img.style.width = `${newSize}px`;
                     img.style.left = `${x - newSize / 2}px`;
                     img.style.top = `${y - newSize / 2}px`;
@@ -79,7 +81,7 @@ document.getElementById("touch-area").addEventListener("touchend", (event) => {
         if (activeTouches[id]) {
             clearInterval(activeTouches[id].interval);
             activeTouches[id].audio.pause();
-            delete activeTouches[id]; // Image stays, but stops spinning
+            delete activeTouches[id];
         }
     }
 });
