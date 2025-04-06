@@ -47,37 +47,16 @@ h1 {
 
 body {
     background-color: black;
-    color: white;
+    color: #dddcc9;
     font-family: Helvetica, Arial, sans-serif;
     text-align: center;
     overflow: hidden; /* Ensure no scrolling */
 }
 
-h1 {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 24px;
-    letter-spacing: 2px;
-    z-index: 10; /* Ensure h1 is above the images */
-}
-
 #touch-area {
     width: 100vw;
     height: 100vh;
-    position: absolute;
-    top: 0;
-    left: 0;
-    overflow: hidden; /* Ensure no scrolling */
-}
-
-.touch-image {
-    position: absolute;
-    transform-origin: center;
-    pointer-events: none;
-    object-fit: contain; /* Ensures images don’t get squished */
-    z-index: 5; /* Ensure images are below h1 */
+    display: block;
 }
 
 #controls {
@@ -91,6 +70,12 @@ h1 {
     letter-spacing: 1px;
 }
 
-#mute, #save-recording {
+.button {
     cursor: pointer;
+    color: #47775d;
+    background-color: #dddcc9;
+    padding: 10px 20px;
+    border-radius: 5px;
+    border: 2px solid #47775d;
+    user-select: none; /* Prevent text selection */
 }

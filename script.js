@@ -195,15 +195,40 @@ const activeTouches = {};
 const maxSize = 1000;
 const growthRate = 80;
 
-// Ensure audio context is created on user interaction
-let audioContext;
-document.body.addEventListener('touchstart', () => {
-    if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    }
-}, { once: true });
+const canvas = document.getElementById('touch-area');
+const ctx = canvas.getContext('2d');
 
-document.getElementById("touch-area").addEventListener("touchstart", (event) => {
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const resizeCanvas = () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    drawTitle();
+};
+window.addEventListener('resize', resizeCanvas);
+
+const drawTitle = () => {
+    ctx.clearRect(0, 0, canvas.width, 50); // Clear the area where the title will be drawn
+    ctx.fillStyle = '#dddcc9';
+    ctx.font = '24px Helvetica, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('HUMAN RHYTHMS', canvas.width / 2, 30);
+};
+
+const drawImage = (imgSrc, x, y, size, rotation) => {
+    const img = new Image();
+    img.src = imgSrc;
+    img.onload = () => {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rotation * Math.PI / 180);
+        ctx.drawImage(img, -size / 2, -size / 2, size, size);
+        ctx.restore();
+    };
+};
+
+document.getElementById('touch-area').addEventListener('touchstart', (event) => {
     event.preventDefault(); // Prevent default touch behaviors like scrolling
     for (let touch of event.touches) {
         const id = touch.identifier;
@@ -215,26 +240,15 @@ document.getElementById("touch-area").addEventListener("touchstart", (event) => 
             const imgSrc = images[index];
             const audioSrc = sounds[imgSrc];
 
-            const img = document.createElement("img");
-            img.src = imgSrc;
-            img.classList.add("touch-image");
-
-            img.style.position = "absolute";
-            img.style.width = "40px";
-            img.style.height = "auto"; // Keeps aspect ratio
-            img.style.left = `${x - 20}px`; // Center it
-            img.style.top = `${y - 20}px`; // Center it
-            document.body.appendChild(img);
-
             const audio = new Audio(audioSrc); // Create a new audio instance for each touch
             audio.loop = true;
             audio.volume = 0.2;
 
-            let rotationAngle = 0;
-            const spinSpeed = Math.random() * 6 + 2;
+            let rotationAngle = 0; 
+            const spinSpeed = Math.random() * 6 + 2; 
 
             activeTouches[id] = {
-                img,
+                imgSrc,
                 audio,
                 startTime: Date.now(),
                 rotationAngle,
@@ -244,23 +258,18 @@ document.getElementById("touch-area").addEventListener("touchstart", (event) => 
                     audio.volume = Math.min(1, 0.2 + duration * 0.1);
 
                     rotationAngle += spinSpeed;
-                    img.style.transform = `rotate(${rotationAngle}deg)`;
-
-                    img.style.width = `${newSize}px`;
-                    img.style.left = `${x - newSize / 2}px`;
-                    img.style.top = `${y - newSize / 2}px`;
+                    drawImage(imgSrc, x, y, newSize, rotationAngle);
                 }, 50),
             };
 
-            // Play the audio for this touch
             audio.play().catch(error => {
                 console.log('Audio play failed:', error);
-            });
+            }); // Play the audio for this touch
         }
     }
 });
 
-document.getElementById("touch-area").addEventListener("touchend", (event) => {
+document.getElementById('touch-area').addEventListener('touchend', (event) => {
     for (let touch of event.changedTouches) {
         const id = touch.identifier;
         if (activeTouches[id]) {
@@ -271,24 +280,25 @@ document.getElementById("touch-area").addEventListener("touchend", (event) => {
     }
 });
 
-document.getElementById("mute").addEventListener("click", () => {
+document.getElementById('mute').addEventListener('click', () => {
     for (let id in activeTouches) {
         if (activeTouches[id]) {
             clearInterval(activeTouches[id].interval);
             activeTouches[id].audio.pause();
-            document.body.removeChild(activeTouches[id].img);
             delete activeTouches[id];
         }
     }
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+    drawTitle(); // Redraw the title
 });
 
-document.getElementById("save-recording").addEventListener("click", () => {
-    html2canvas(document.body, {
-        backgroundColor: null // Ensures the background is captured as is
-    }).then(canvas => {
-        let link = document.createElement('a');
-        link.download = 'human_rhythms.png';
-        link.href = canvas.toDataURL();
-        link.click();
-    });
+document.getElementById('save-recording').addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = 'human_rhythms.png';
+    link.href = canvas.toDataURL();
+    link.click();
 });
+
+// Initial draw
+drawTitle();
+resizeCanvas();
