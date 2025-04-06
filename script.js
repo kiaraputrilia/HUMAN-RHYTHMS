@@ -192,6 +192,7 @@ const sounds = {
 
 const images = Object.keys(sounds);
 const activeTouches = {};
+const drawnImages = [];
 const maxSize = 1000;
 const growthRate = 80;
 
@@ -200,38 +201,35 @@ const ctx = canvas.getContext('2d');
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
-let allImages = [];
 
 const resizeCanvas = () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    drawTitle();
-    redrawImages();
+    redraw();
 };
 window.addEventListener('resize', resizeCanvas);
-
-const drawTitle = () => {
-    ctx.fillStyle = '#dddcc9';
-    ctx.font = '24px Helvetica, Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('HUMAN RHYTHMS', canvas.width / 2, 30);
-};
 
 const drawImage = (img, x, y, size, rotation) => {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(rotation * Math.PI / 180);
-    ctx.drawImage(img, -size / 2, -size / 2, size, size);
+    ctx.drawImage(img, -size / 2, -size / 2, size, size * img.height / img.width); // Maintain aspect ratio
     ctx.restore();
 };
 
-const redrawImages = () => {
+const redraw = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawTitle();
-    allImages.forEach(({ img, x, y, size, rotation }) => {
+    for (const { img, x, y, size, rotation } of drawnImages) {
         drawImage(img, x, y, size, rotation);
-    });
+    }
 };
+
+let audioContext;
+document.body.addEventListener('click', () => {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}, { once: true });
 
 document.getElementById('touch-area').addEventListener('touchstart', (event) => {
     event.preventDefault(); // Prevent default touch behaviors like scrolling
@@ -258,16 +256,18 @@ document.getElementById('touch-area').addEventListener('touchstart', (event) => 
             activeTouches[id] = {
                 img,
                 audio,
+                x,
+                y,
                 startTime: Date.now(),
                 rotationAngle,
+                spinSpeed,
                 interval: setInterval(() => {
                     let duration = (Date.now() - activeTouches[id].startTime) / 1000;
                     let newSize = Math.min(40 + duration * growthRate, maxSize);
+                    activeTouches[id].rotationAngle += spinSpeed;
                     audio.volume = Math.min(1, 0.2 + duration * 0.1);
-
-                    rotationAngle += spinSpeed;
-                    allImages.push({ img, x, y, size: newSize, rotation: rotationAngle });
-                    redrawImages();
+                    redraw();
+                    drawImage(img, x, y, newSize, activeTouches[id].rotationAngle);
                 }, 50),
             };
 
@@ -284,9 +284,19 @@ document.getElementById('touch-area').addEventListener('touchend', (event) => {
         if (activeTouches[id]) {
             clearInterval(activeTouches[id].interval);
             activeTouches[id].audio.pause();
+            let duration = (Date.now() - activeTouches[id].startTime) / 1000;
+            let finalSize = Math.min(40 + duration * growthRate, maxSize);
+            drawnImages.push({
+                img: activeTouches[id].img,
+                x: activeTouches[id].x,
+                y: activeTouches[id].y,
+                size: finalSize,
+                rotation: activeTouches[id].rotationAngle,
+            });
             delete activeTouches[id]; // Only delete the touch entry, keep the image on the screen
         }
     }
+    redraw();
 });
 
 document.getElementById('mute').addEventListener('click', () => {
@@ -297,9 +307,8 @@ document.getElementById('mute').addEventListener('click', () => {
             delete activeTouches[id];
         }
     }
-    allImages = [];
+    drawnImages.length = 0;
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
-    drawTitle(); // Redraw the title
 });
 
 document.getElementById('save-recording').addEventListener('click', () => {
@@ -310,5 +319,4 @@ document.getElementById('save-recording').addEventListener('click', () => {
 });
 
 // Initial draw
-drawTitle();
 resizeCanvas();

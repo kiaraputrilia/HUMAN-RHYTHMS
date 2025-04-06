@@ -49,8 +49,19 @@ body {
     background-color: black;
     color: #dddcc9;
     font-family: Helvetica, Arial, sans-serif;
-    text-align: center;
     overflow: hidden; /* Ensure no scrolling */
+    text-align: center;
+}
+
+#title {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    letter-spacing: 2px;
+    z-index: 10; /* Ensure title is above everything */
+    pointer-events: none; /* Ensure title is not interactive */
 }
 
 #touch-area {
@@ -58,6 +69,9 @@ body {
     height: 100vh;
     display: block;
     background-color: black;
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 
 #controls {
