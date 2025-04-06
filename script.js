@@ -200,32 +200,37 @@ const ctx = canvas.getContext('2d');
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
+let allImages = [];
 
 const resizeCanvas = () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     drawTitle();
+    redrawImages();
 };
 window.addEventListener('resize', resizeCanvas);
 
 const drawTitle = () => {
-    ctx.clearRect(0, 0, canvas.width, 50); // Clear the area where the title will be drawn
     ctx.fillStyle = '#dddcc9';
     ctx.font = '24px Helvetica, Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('HUMAN RHYTHMS', canvas.width / 2, 30);
 };
 
-const drawImage = (imgSrc, x, y, size, rotation) => {
-    const img = new Image();
-    img.src = imgSrc;
-    img.onload = () => {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(rotation * Math.PI / 180);
-        ctx.drawImage(img, -size / 2, -size / 2, size, size);
-        ctx.restore();
-    };
+const drawImage = (img, x, y, size, rotation) => {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation * Math.PI / 180);
+    ctx.drawImage(img, -size / 2, -size / 2, size, size);
+    ctx.restore();
+};
+
+const redrawImages = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawTitle();
+    allImages.forEach(({ img, x, y, size, rotation }) => {
+        drawImage(img, x, y, size, rotation);
+    });
 };
 
 document.getElementById('touch-area').addEventListener('touchstart', (event) => {
@@ -240,15 +245,18 @@ document.getElementById('touch-area').addEventListener('touchstart', (event) => 
             const imgSrc = images[index];
             const audioSrc = sounds[imgSrc];
 
+            const img = new Image();
+            img.src = imgSrc;
+
             const audio = new Audio(audioSrc); // Create a new audio instance for each touch
             audio.loop = true;
             audio.volume = 0.2;
 
-            let rotationAngle = 0; 
-            const spinSpeed = Math.random() * 6 + 2; 
+            let rotationAngle = 0;
+            const spinSpeed = Math.random() * 6 + 2;
 
             activeTouches[id] = {
-                imgSrc,
+                img,
                 audio,
                 startTime: Date.now(),
                 rotationAngle,
@@ -258,7 +266,8 @@ document.getElementById('touch-area').addEventListener('touchstart', (event) => 
                     audio.volume = Math.min(1, 0.2 + duration * 0.1);
 
                     rotationAngle += spinSpeed;
-                    drawImage(imgSrc, x, y, newSize, rotationAngle);
+                    allImages.push({ img, x, y, size: newSize, rotation: rotationAngle });
+                    redrawImages();
                 }, 50),
             };
 
@@ -288,6 +297,7 @@ document.getElementById('mute').addEventListener('click', () => {
             delete activeTouches[id];
         }
     }
+    allImages = [];
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
     drawTitle(); // Redraw the title
 });
