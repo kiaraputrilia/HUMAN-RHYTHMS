@@ -1,3 +1,44 @@
+/* * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: black;
+    color: white;
+    font-family: Helvetica, Arial, sans-serif;
+    text-align: center;
+    overflow: hidden; 
+}
+
+h1 {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    letter-spacing: 2px;
+    z-index: 10; 
+}
+
+#touch-area {
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+}
+
+.touch-image {
+    position: absolute;
+    transform-origin: center;
+    pointer-events: none;
+    object-fit: contain; 
+    z-index: 5; 
+} */
+
 * {
     margin: 0;
     padding: 0;
@@ -37,4 +78,19 @@ h1 {
     pointer-events: none;
     object-fit: contain; /* Ensures images don’t get squished */
     z-index: 5; /* Ensure images are below h1 */
+}
+
+#controls {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+    font-size: 18px;
+    letter-spacing: 1px;
+}
+
+#mute, #save-recording {
+    cursor: pointer;
 }
