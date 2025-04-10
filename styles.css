@@ -9,7 +9,7 @@ body {
     color: white;
     font-family: Helvetica, Arial, sans-serif;
     text-align: center;
-    overflow: hidden; 
+    overflow: hidden; /* Ensure no scrolling */
 }
 
 h1 {
@@ -19,7 +19,7 @@ h1 {
     transform: translateX(-50%);
     font-size: 24px;
     letter-spacing: 2px;
-    z-index: 10; 
+    z-index: 10; /* Ensure h1 is above the images */
 }
 
 #touch-area {
@@ -28,15 +28,15 @@ h1 {
     position: absolute;
     top: 0;
     left: 0;
-    overflow: hidden;
+    overflow: hidden; /* Ensure no scrolling */
 }
 
 .touch-image {
     position: absolute;
     transform-origin: center;
     pointer-events: none;
-    object-fit: contain; 
-    z-index: 5; 
+    object-fit: contain; /* Ensures images don’t get squished */
+    z-index: 5; /* Ensure images are below h1 */
 }
 
 /* * {
