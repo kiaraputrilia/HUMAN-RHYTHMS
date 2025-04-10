@@ -1,4 +1,4 @@
-/* * {
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -37,9 +37,9 @@ h1 {
     pointer-events: none;
     object-fit: contain; 
     z-index: 5; 
-} */
+}
 
-* {
+/* * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -49,7 +49,7 @@ body {
     background-color: black;
     color: #dddcc9;
     font-family: Helvetica, Arial, sans-serif;
-    overflow: hidden; /* Ensure no scrolling */
+    overflow: hidden;
     text-align: center;
 }
 
@@ -60,8 +60,8 @@ body {
     transform: translateX(-50%);
     font-size: 24px;
     letter-spacing: 2px;
-    z-index: 10; /* Ensure title is above everything */
-    pointer-events: none; /* Ensure title is not interactive */
+    z-index: 10; 
+    pointer-events: none; 
 }
 
 #touch-area {
@@ -83,8 +83,7 @@ body {
     padding: 0 20px;
     font-size: 18px;
     letter-spacing: 1px;
-    z-index: 10; /* Ensure controls are above the canvas */
-}
+    z-index: 10; 
 
 .button {
     cursor: pointer;
@@ -93,5 +92,5 @@ body {
     padding: 10px 20px;
     border-radius: 5px;
     border: 2px solid #47775d;
-    user-select: none; /* Prevent text selection */
-}
+    user-select: none; 
+} */
