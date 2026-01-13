@@ -74,7 +74,7 @@ h1 {
   left: 50%;
   transform: translateX(-50%);
   font-size: 24px;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   line-height: 1.25;
   z-index: 10; /* Ensure h1 is above the images */
 }
