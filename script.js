@@ -67,6 +67,33 @@ if (!touchArea) {
   console.error('Element with id "touch-area" not found.');
 }
 
+function clearVisualsDissolve(totalMs = 12000) {
+  const imgs = Array.from(document.querySelectorAll(".touch-image"));
+  if (imgs.length === 0) return;
+
+  // stop any currently active touch audio + growth loops
+  Object.keys(activeTouches).forEach((id) => {
+    const entry = activeTouches[id];
+    if (!entry) return;
+    clearInterval(entry.interval);
+    entry.audioNode?.stop();
+    delete activeTouches[id];
+  });
+
+  // organic dissolve order
+  imgs.sort(() => Math.random() - 0.5);
+
+  const perDelay = Math.max(40, Math.floor(totalMs / imgs.length));
+
+  imgs.forEach((img, i) => {
+    setTimeout(() => {
+      img.classList.add("is-fading");
+      setTimeout(() => img.remove(), 950); // match CSS transition
+    }, i * perDelay);
+  });
+}
+
+
 // --------------------
 // BUTTON SAFETY (Back + Clear)
 // Stops button taps from also triggering touch canvas logic.
@@ -93,6 +120,39 @@ function protectButtonFromCanvas(selector) {
 
 protectButtonFromCanvas('.back-btn');
 protectButtonFromCanvas('.clear-btn');
+
+// --------------------
+// BUTTON SAFETY (Back + Clear)
+// --------------------
+function guardButtonFromTouchCanvas(el, onActivate) {
+  if (!el) return;
+
+  const handler = (e) => {
+    // stop it from reaching #touch-area
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof onActivate === "function") onActivate();
+  };
+
+  // pointerdown covers mouse + touch in modern browsers
+  el.addEventListener("pointerdown", handler, { passive: false });
+
+  // extra safety for older iOS Safari
+  el.addEventListener("touchstart", handler, { passive: false });
+}
+
+// BACK (just prevent leaking; link still navigates normally)
+const backBtn = document.querySelector(".back-btn");
+if (backBtn) {
+  // We only want to stop propagation; DO NOT prevent default navigation here
+  backBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+  backBtn.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: true });
+}
+
+// CLEAR (run dissolve)
+const clearBtn = document.querySelector(".clear-btn");
+guardButtonFromTouchCanvas(clearBtn, () => clearVisualsDissolve(12000));
+
 
 // --------------------
 // Audio helper

@@ -158,6 +158,20 @@ h1 {
   opacity: 0;
 }
 
+/* make sure the buttons always receive taps */
+.corner-svg-btn{
+  pointer-events: auto;
+}
+
+/* Smooth dissolve */
+.touch-image{
+  transition: opacity 900ms linear;
+  opacity: 1;
+}
+.touch-image.is-fading{
+  opacity: 0;
+}
+
 /* * {
     margin: 0;
     padding: 0;
