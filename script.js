@@ -227,11 +227,6 @@ touchArea && touchArea.addEventListener("touchcancel", (event) => {
 });
 
 
-
-
-
-
-
 // const sounds = {
 //     "beep.png": "beep.mp3",
 //     "car.png": "car.mp3",
