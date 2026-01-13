@@ -1,39 +1,36 @@
-// --- Supabase (global score counter) ---
-const SUPABASE_URL = "PASTE_YOUR_PROJECT_URL_HERE";
-const SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_KEY_HERE";
+// --------------------
+// SUPABASE SCORE
+// --------------------
+const SUPABASE_URL = "https://ryasxjrqxkjyukxdgfsu.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
 
 const supabaseClient =
   window.supabase?.createClient?.(SUPABASE_URL, SUPABASE_ANON_KEY) ?? null;
 
+let didIncrementScore = false;
+
 async function incrementScoreOncePerSession() {
-  // Only run on composition page
   const scoreEl = document.getElementById("score-value");
   if (!scoreEl) return;
+  if (didIncrementScore) return;
 
-  // Only increment once per tab session
-  if (sessionStorage.getItem("hr_scored") === "1") return;
-
-  if (!supabaseClient) {
-    console.warn("Supabase client not available (did you include the CDN script?)");
-    return;
-  }
+  if (!supabaseClient) return;
 
   try {
-    // Atomic increment via RPC
     const { data, error } = await supabaseClient.rpc("increment_counter");
     if (error) throw error;
 
-    // data is the new bigint value returned by the function
     scoreEl.textContent = String(data);
-    sessionStorage.setItem("hr_scored", "1");
+    didIncrementScore = true;
   } catch (err) {
-    console.error("Failed to increment score:", err);
+    console.error(err);
   }
 }
 
-
-// Replace <S3_BASE> with your S3 bucket base if needed.
-const S3_BASE = 'https://desireinabowlofrice.s3.us-east-2.amazonaws.com/';
+// --------------------
+// AUDIO + ASSETS
+// --------------------
+const S3_BASE = "https://desireinabowlofrice.s3.us-east-2.amazonaws.com/";
 const sounds = {
   "beep.png": S3_BASE + "beep.mp3",
   "car.png": S3_BASE + "car.mp3",
@@ -54,9 +51,6 @@ const activeTouches = {};
 const maxSize = 1000;
 const growthRate = 80;
 
-// --------------------
-// Web Audio API setup
-// --------------------
 let audioContext = null;
 const audioBuffers = {};
 let audioLoadPromise = null;
@@ -67,306 +61,159 @@ async function ensureAudioContextAndBuffers() {
   }
   if (audioLoadPromise) return audioLoadPromise;
 
-  const loadPromises = Object.values(sounds).map(async (src) => {
-    if (audioBuffers[src]) return;
-    try {
+  audioLoadPromise = Promise.all(
+    Object.values(sounds).map(async (src) => {
+      if (audioBuffers[src]) return;
       const res = await fetch(src);
-      const arrayBuffer = await res.arrayBuffer();
-      audioBuffers[src] = await audioContext.decodeAudioData(arrayBuffer);
-    } catch (err) {
-      console.error('Failed to load or decode', src, err);
-    }
-  });
+      const buf = await res.arrayBuffer();
+      audioBuffers[src] = await audioContext.decodeAudioData(buf);
+    })
+  );
 
-  audioLoadPromise = Promise.all(loadPromises);
   return audioLoadPromise;
 }
 
-function resumeAudioContextIfNeeded() {
-  if (!audioContext) return;
-  if (audioContext.state === 'suspended') {
-    audioContext.resume().catch((e) =>
-      console.warn('AudioContext resume failed:', e)
-    );
+function resumeAudio() {
+  if (audioContext?.state === "suspended") {
+    audioContext.resume();
   }
 }
 
-// --------------------
-// DOM references
-// --------------------
-const touchArea = document.getElementById("touch-area");
-if (!touchArea) {
-  console.error('Element with id "touch-area" not found.');
-}
-
-function clearVisualsDissolve(totalMs = 12000) {
-  const imgs = Array.from(document.querySelectorAll(".touch-image"));
-  if (imgs.length === 0) return;
-
-  // stop any currently active touch audio + growth loops
-  Object.keys(activeTouches).forEach((id) => {
-    const entry = activeTouches[id];
-    if (!entry) return;
-    clearInterval(entry.interval);
-    entry.audioNode?.stop();
-    delete activeTouches[id];
-  });
-
-  // organic dissolve order
-  imgs.sort(() => Math.random() - 0.5);
-
-  const perDelay = Math.max(40, Math.floor(totalMs / imgs.length));
-
-  imgs.forEach((img, i) => {
-    setTimeout(() => {
-      img.classList.add("is-fading");
-      setTimeout(() => img.remove(), 950); // match CSS transition
-    }, i * perDelay);
-  });
-}
-
-
-// --------------------
-// BUTTON SAFETY (Back + Clear)
-// Stops button taps from also triggering touch canvas logic.
-// --------------------
-function protectButtonFromCanvas(selector) {
-  const btn = document.querySelector(selector);
-  if (!btn) return;
-
-  // Prevent pointer events from leaking into the sound canvas
-  btn.addEventListener('pointerdown', (e) => {
-    e.stopPropagation();
-  });
-
-  // Extra guard for older iOS Safari
-  btn.addEventListener('touchstart', (e) => {
-    e.stopPropagation();
-  }, { passive: true });
-
-  // Optional: also stop click bubbling (desktop)
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-  });
-}
-
-protectButtonFromCanvas('.back-btn');
-protectButtonFromCanvas('.clear-btn');
-
-// --------------------
-// BUTTON SAFETY (Back + Clear)
-// --------------------
-function guardButtonFromTouchCanvas(el, onActivate) {
-  if (!el) return;
-
-  const handler = (e) => {
-    // stop it from reaching #touch-area
-    e.preventDefault();
-    e.stopPropagation();
-    if (typeof onActivate === "function") onActivate();
-  };
-
-  // pointerdown covers mouse + touch in modern browsers
-  el.addEventListener("pointerdown", handler, { passive: false });
-
-  // extra safety for older iOS Safari
-  el.addEventListener("touchstart", handler, { passive: false });
-}
-
-// BACK (just prevent leaking; link still navigates normally)
-const backBtn = document.querySelector(".back-btn");
-if (backBtn) {
-  // We only want to stop propagation; DO NOT prevent default navigation here
-  backBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
-  backBtn.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: true });
-}
-
-// CLEAR (run dissolve)
-const clearBtn = document.querySelector(".clear-btn");
-guardButtonFromTouchCanvas(clearBtn, () => clearVisualsDissolve(12000));
-
-
-// --------------------
-// Audio helper
-// --------------------
-function createPlayingSource(audioSrc, initialGain = 0.2, loop = true) {
-  if (!audioContext) return null;
-
+function createPlayingSource(src) {
   const source = audioContext.createBufferSource();
-  source.buffer = audioBuffers[audioSrc] || null;
-  source.loop = loop;
+  source.buffer = audioBuffers[src];
+  source.loop = true;
 
-  const gainNode = audioContext.createGain();
-  gainNode.gain.value = initialGain;
+  const gain = audioContext.createGain();
+  gain.gain.value = 0.2;
 
-  source.connect(gainNode).connect(audioContext.destination);
+  source.connect(gain).connect(audioContext.destination);
 
   return {
     source,
-    gainNode,
-    start: () => {
-      try {
-        source.start(0);
-      } catch (err) {
-        console.warn('BufferSource start failed:', err);
-      }
-    },
+    gain,
+    start: () => source.start(),
     stop: () => {
-      try { source.stop(0); } catch (err) {}
-      try {
-        source.disconnect();
-        gainNode.disconnect();
-      } catch (e) {}
+      try { source.stop(); } catch {}
     }
   };
 }
 
 // --------------------
-// Touch handlers
+// TOUCH SURFACE
 // --------------------
-touchArea && touchArea.addEventListener(
+const touchArea = document.getElementById("touch-area");
+
+touchArea.addEventListener(
   "touchstart",
   async (event) => {
     event.preventDefault();
 
-       // ✅ increment score on first touch (once per session)
     incrementScoreOncePerSession();
 
     await ensureAudioContextAndBuffers();
-    resumeAudioContextIfNeeded();
+    resumeAudio();
 
-    for (let touch of event.changedTouches) {
+    for (const touch of event.changedTouches) {
       const id = touch.identifier;
+      if (activeTouches[id]) continue;
+
       const x = touch.clientX;
       const y = touch.clientY;
 
-      if (activeTouches[id]) continue;
-
-      const index = Math.floor(Math.random() * images.length);
-      const imgSrc = images[index];
+      const imgSrc = images[Math.floor(Math.random() * images.length)];
       const audioSrc = sounds[imgSrc];
 
       const img = document.createElement("img");
       img.src = imgSrc;
-      img.classList.add("touch-image");
+      img.className = "touch-image";
       img.style.width = "40px";
       img.style.left = `${x - 20}px`;
       img.style.top = `${y - 20}px`;
       document.body.appendChild(img);
 
-      let audioNode = null;
-      if (audioBuffers[audioSrc]) {
-        audioNode = createPlayingSource(audioSrc, 0.2, true);
-        audioNode?.start();
-      } else {
-        await ensureAudioContextAndBuffers();
-        audioNode = createPlayingSource(audioSrc, 0.2, true);
-        audioNode?.start();
-      }
+      const audio = createPlayingSource(audioSrc);
+      audio.start();
 
-      let rotationAngle = 0;
-      const spinSpeed = Math.random() * 6 + 2;
+      const startTime = Date.now();
+      const spin = Math.random() * 6 + 2;
 
-      const touchRecord = {
-        img,
-        audioNode,
-        startTime: Date.now(),
-        rotationAngle,
-        interval: null,
-        x,
-        y
-      };
+      const interval = setInterval(() => {
+        const t = (Date.now() - startTime) / 1000;
+        const size = Math.min(40 + t * growthRate, maxSize);
 
-      touchRecord.interval = setInterval(() => {
-        const duration = (Date.now() - touchRecord.startTime) / 1000;
-        const newSize = Math.min(40 + duration * growthRate, maxSize);
-
-        if (touchRecord.audioNode?.gainNode) {
-          touchRecord.audioNode.gainNode.gain.value =
-            Math.min(1, 0.2 + duration * 0.1);
-        }
-
-        touchRecord.rotationAngle += spinSpeed;
-        img.style.transform = `rotate(${touchRecord.rotationAngle}deg)`;
-        img.style.width = `${newSize}px`;
-        img.style.left = `${x - newSize / 2}px`;
-        img.style.top = `${y - newSize / 2}px`;
+        img.style.width = `${size}px`;
+        img.style.left = `${x - size / 2}px`;
+        img.style.top = `${y - size / 2}px`;
+        img.style.transform = `rotate(${spin * t}deg)`;
+        audio.gain.gain.value = Math.min(1, 0.2 + t * 0.1);
       }, 50);
 
-      activeTouches[id] = touchRecord;
+      activeTouches[id] = { img, audio, interval };
     }
   },
   { passive: false }
 );
 
-touchArea && touchArea.addEventListener("touchend", (event) => {
-  for (let touch of event.changedTouches) {
+touchArea.addEventListener("touchend", (event) => {
+  for (const touch of event.changedTouches) {
     const entry = activeTouches[touch.identifier];
     if (!entry) continue;
 
     clearInterval(entry.interval);
-    entry.audioNode?.stop();
+    entry.audio.stop();
     delete activeTouches[touch.identifier];
   }
 });
 
-touchArea && touchArea.addEventListener("touchcancel", (event) => {
-  for (let touch of event.changedTouches) {
+touchArea.addEventListener("touchcancel", (event) => {
+  for (const touch of event.changedTouches) {
     const entry = activeTouches[touch.identifier];
     if (!entry) continue;
 
     clearInterval(entry.interval);
-    entry.audioNode?.stop();
+    entry.audio.stop();
     delete activeTouches[touch.identifier];
   }
 });
 
 // --------------------
-// CLEAR BUTTON (dissolve visuals 10–15s)
+// CLEAR SOUNDS (DISSOLVE)
 // --------------------
-const clearBtn = document.querySelector('.clear-btn');
+const clearBtn = document.querySelector(".clear-btn");
 
-function clearVisualsDissolve(totalMs = 12000) {
-  // grab all current visuals
-  const imgs = Array.from(document.querySelectorAll('.touch-image'));
-  if (imgs.length === 0) return;
+function clearVisualsDissolve(duration = 12000) {
+  const imgs = Array.from(document.querySelectorAll(".touch-image"));
+  if (!imgs.length) return;
 
-  // (optional) stop any currently-playing audio too
-  Object.keys(activeTouches).forEach((id) => {
-    const entry = activeTouches[id];
-    if (!entry) return;
-    clearInterval(entry.interval);
-    entry.audioNode?.stop();
-    delete activeTouches[id];
+  Object.values(activeTouches).forEach((t) => {
+    clearInterval(t.interval);
+    t.audio.stop();
   });
 
-  // random order so it feels organic
   imgs.sort(() => Math.random() - 0.5);
-
-  // spread removals across total duration
-  const perDelay = Math.max(40, Math.floor(totalMs / imgs.length));
+  const step = Math.max(40, duration / imgs.length);
 
   imgs.forEach((img, i) => {
-    const delay = i * perDelay;
-
     setTimeout(() => {
-      img.classList.add('is-fading');
-
-      // remove after the CSS transition ends (900ms in CSS)
-      setTimeout(() => {
-        img.remove();
-      }, 950);
-    }, delay);
+      img.classList.add("is-fading");
+      setTimeout(() => img.remove(), 900);
+    }, i * step);
   });
 }
 
 if (clearBtn) {
-  clearBtn.addEventListener('click', (e) => {
-    e.preventDefault();   // important if your clear button is an <a>
-    e.stopPropagation();
-    clearVisualsDissolve(12000); // try 12000–15000
-  });
+  clearBtn.addEventListener(
+    "touchstart",
+    (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      clearVisualsDissolve();
+    },
+    { passive: false }
+  );
 }
+
 
 
 // const sounds = {
