@@ -226,6 +226,53 @@ touchArea && touchArea.addEventListener("touchcancel", (event) => {
   }
 });
 
+// --------------------
+// CLEAR BUTTON (dissolve visuals 10–15s)
+// --------------------
+const clearBtn = document.querySelector('.clear-btn');
+
+function clearVisualsDissolve(totalMs = 12000) {
+  // grab all current visuals
+  const imgs = Array.from(document.querySelectorAll('.touch-image'));
+  if (imgs.length === 0) return;
+
+  // (optional) stop any currently-playing audio too
+  Object.keys(activeTouches).forEach((id) => {
+    const entry = activeTouches[id];
+    if (!entry) return;
+    clearInterval(entry.interval);
+    entry.audioNode?.stop();
+    delete activeTouches[id];
+  });
+
+  // random order so it feels organic
+  imgs.sort(() => Math.random() - 0.5);
+
+  // spread removals across total duration
+  const perDelay = Math.max(40, Math.floor(totalMs / imgs.length));
+
+  imgs.forEach((img, i) => {
+    const delay = i * perDelay;
+
+    setTimeout(() => {
+      img.classList.add('is-fading');
+
+      // remove after the CSS transition ends (900ms in CSS)
+      setTimeout(() => {
+        img.remove();
+      }, 950);
+    }, delay);
+  });
+}
+
+if (clearBtn) {
+  clearBtn.addEventListener('click', (e) => {
+    e.preventDefault();   // important if your clear button is an <a>
+    e.stopPropagation();
+    clearVisualsDissolve(12000); // try 12000–15000
+  });
+}
+
 
 // const sounds = {
 //     "beep.png": "beep.mp3",

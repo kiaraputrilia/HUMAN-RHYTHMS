@@ -148,6 +148,15 @@ h1 {
   transform: translate(2px, 2px);
 }
 
+/* Smooth dissolve for clearing visuals */
+.touch-image{
+  transition: opacity 900ms linear; /* dissolve speed per image */
+}
+
+/* when clearing */
+.touch-image.is-fading{
+  opacity: 0;
+}
 
 /* * {
     margin: 0;
