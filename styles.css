@@ -1,44 +1,116 @@
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-body {
-    background-color: black;
-    color: white;
-    font-family: Helvetica, Arial, sans-serif;
-    text-align: center;
-    overflow: hidden; /* Ensure no scrolling */
+/* Default body (safe baseline) */
+body{
+  font-family: Helvetica, Arial, sans-serif;
+  overflow: hidden; /* Ensure no scrolling */
+  color: white;
 }
 
+/* ------------------------- */
+/* INDEX PAGE (green screen) */
+/* ------------------------- */
+body.page-index{
+  background-color: #2e7656;
+  text-align: left;
+
+  /* Helvetica Bold */
+  font-weight: 700;
+  font-size: 14pt; /* you changed from 8 -> 14pt */
+  line-height: 1.25;
+}
+
+/* wrapper for your index text */
+.page-index .copy{
+  padding-top: calc(44px + env(safe-area-inset-top));
+  padding-left: calc(34px + env(safe-area-inset-left));
+  padding-right: calc(28px + env(safe-area-inset-right));
+  padding-bottom: calc(90px + env(safe-area-inset-bottom)); /* space for button */
+  max-width: 430px;
+}
+
+.page-index .copy p{
+  margin: 0 0 26px 0;
+}
+
+/* -------------------------------- */
+/* COMPOSITION (black) */
+/* -------------------------------- */
+body.page-composition{
+  background-color: black;
+  text-align: center;
+}
+
+/* keep your existing styles for the composing page */
 h1 {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 24px;
-    letter-spacing: 2px;
-    z-index: 10; /* Ensure h1 is above the images */
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 24px;
+  letter-spacing: 2px;
+  line-height: 1.25;
+  z-index: 10; /* Ensure h1 is above the images */
 }
 
 #touch-area {
-    width: 100vw;
-    height: 100vh;
-    position: absolute;
-    top: 0;
-    left: 0;
-    overflow: hidden; /* Ensure no scrolling */
+  width: 100vw;
+  height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden; /* Ensure no scrolling */
+  z-index: 1; /* explicitly below buttons */
 }
 
 .touch-image {
-    position: absolute;
-    transform-origin: center;
-    pointer-events: none;
-    object-fit: contain; /* Ensures images don’t get squished */
-    z-index: 5; /* Ensure images are below h1 */
+  position: absolute;
+  transform-origin: center;
+  pointer-events: none;
+  object-fit: contain; /* Ensures images don’t get squished */
+  z-index: 5; /* Ensure images are below h1 */
 }
 
+/* -------------------------------- */
+/* SHARED bottom-right SVG button    */
+/* (use for Start + Back buttons)    */
+/* -------------------------------- */
+.start-svg-btn,
+.corner-svg-btn{
+  position: fixed;
+  right: calc(24px + env(safe-area-inset-right));
+  bottom: calc(18px + env(safe-area-inset-bottom));
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 120px;           /* tweak as needed */
+  height: auto;
+
+  z-index: 9999;          /* always above touch area + images */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+.start-svg-btn svg,
+.corner-svg-btn svg{
+  width: 100%;
+  height: auto;
+  display: block;
+  /* IMPORTANT: do NOT set position: fixed here */
+}
+
+.start-svg-btn:active,
+.corner-svg-btn:active{
+  transform: translate(2px, 2px);
+}
 
 /* * {
     margin: 0;
