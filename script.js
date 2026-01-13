@@ -21,27 +21,36 @@ const growthRate = 80;
 // Web Audio API setup & preload
 let audioContext = null;
 const audioBuffers = {};
-let audioLoadPromise = null;
+const audioLoadPromises = {}; // per-src promises
 
-async function ensureAudioContextAndBuffers() {
-    if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioLoadPromise) return audioLoadPromise;
+function ensureAudioContext() {
+    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+}
 
-    const loadPromises = Object.values(sounds).map(async (src) => {
-        if (audioBuffers[src]) return;
-        try {
-            const res = await fetch(src);
-            const arrayBuffer = await res.arrayBuffer();
-            // decodeAudioData returns a Promise in modern browsers
-            audioBuffers[src] = await audioContext.decodeAudioData(arrayBuffer);
-        } catch (err) {
-            console.error('Failed to load or decode', src, err);
-        }
-    });
-    audioLoadPromise = Promise.all(loadPromises);
-    return audioLoadPromise;
+// Ensure a single audio buffer is loaded/decoded for given src
+function ensureBufferFor(src) {
+    ensureAudioContext();
+    if (audioBuffers[src]) return Promise.resolve(audioBuffers[src]);
+    if (audioLoadPromises[src]) return audioLoadPromises[src];
+
+    audioLoadPromises[src] = fetch(src)
+        .then(res => {
+            if (!res.ok) throw new Error('Fetch failed: ' + res.status);
+            return res.arrayBuffer();
+        })
+        .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+        .then(decoded => {
+            audioBuffers[src] = decoded;
+            delete audioLoadPromises[src];
+            return decoded;
+        })
+        .catch(err => {
+            console.error('Error loading audio', src, err);
+            delete audioLoadPromises[src];
+            throw err;
+        });
+
+    return audioLoadPromises[src];
 }
 
 // Ensure audio context can be resumed on first user gesture (some platforms require it)
@@ -97,8 +106,8 @@ function createPlayingSource(audioSrc, initialGain = 0.2, loop = true) {
 touchArea && touchArea.addEventListener("touchstart", async (event) => {
     event.preventDefault();
 
-    // ensure context and buffers exist (user gesture)
-    await ensureAudioContextAndBuffers();
+    // make sure AudioContext exists and is resumed on user gesture
+    ensureAudioContext();
     resumeAudioContextIfNeeded();
 
     for (let touch of event.changedTouches) {
@@ -122,26 +131,12 @@ touchArea && touchArea.addEventListener("touchstart", async (event) => {
         img.style.top = `${y - 20}px`;
         document.body.appendChild(img);
 
-        // create and start Web Audio source for this touch
-        let audioNode = null;
-        if (audioBuffers[audioSrc]) {
-            audioNode = createPlayingSource(audioSrc, 0.2, true);
-            if (audioNode) audioNode.start();
-        } else {
-            // If buffer isn't ready for some reason, wait and then start
-            await ensureAudioContextAndBuffers();
-            if (audioBuffers[audioSrc]) {
-                audioNode = createPlayingSource(audioSrc, 0.2, true);
-                if (audioNode) audioNode.start();
-            }
-        }
-
         let rotationAngle = 0;
         const spinSpeed = Math.random() * 6 + 2;
 
         const touchRecord = {
             img,
-            audioNode,
+            audioNode: null,
             startTime: Date.now(),
             rotationAngle,
             interval: null,
@@ -163,6 +158,21 @@ touchArea && touchArea.addEventListener("touchstart", async (event) => {
             img.style.left = `${x - newSize / 2}px`;
             img.style.top = `${y - newSize / 2}px`;
         }, 50);
+
+        // start loading the audio for this touch (non-blocking)
+        ensureBufferFor(audioSrc)
+            .then(() => {
+                // only start audio if the touch is still active
+                if (!activeTouches[id]) return;
+                const node = createPlayingSource(audioSrc, 0.2, true);
+                if (node) {
+                    try { node.start(); } catch (e) { console.warn('start failed', e); }
+                    activeTouches[id].audioNode = node;
+                }
+            })
+            .catch(() => {
+                // audio failed — leave visual only
+            });
 
         activeTouches[id] = touchRecord;
     }
