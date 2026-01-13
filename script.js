@@ -1,4 +1,36 @@
-// script.js
+// --- Supabase (global score counter) ---
+const SUPABASE_URL = "PASTE_YOUR_PROJECT_URL_HERE";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_KEY_HERE";
+
+const supabaseClient =
+  window.supabase?.createClient?.(SUPABASE_URL, SUPABASE_ANON_KEY) ?? null;
+
+async function incrementScoreOncePerSession() {
+  // Only run on composition page
+  const scoreEl = document.getElementById("score-value");
+  if (!scoreEl) return;
+
+  // Only increment once per tab session
+  if (sessionStorage.getItem("hr_scored") === "1") return;
+
+  if (!supabaseClient) {
+    console.warn("Supabase client not available (did you include the CDN script?)");
+    return;
+  }
+
+  try {
+    // Atomic increment via RPC
+    const { data, error } = await supabaseClient.rpc("increment_counter");
+    if (error) throw error;
+
+    // data is the new bigint value returned by the function
+    scoreEl.textContent = String(data);
+    sessionStorage.setItem("hr_scored", "1");
+  } catch (err) {
+    console.error("Failed to increment score:", err);
+  }
+}
+
 
 // Replace <S3_BASE> with your S3 bucket base if needed.
 const S3_BASE = 'https://desireinabowlofrice.s3.us-east-2.amazonaws.com/';
@@ -196,6 +228,9 @@ touchArea && touchArea.addEventListener(
   "touchstart",
   async (event) => {
     event.preventDefault();
+
+       // ✅ increment score on first touch (once per session)
+    incrementScoreOncePerSession();
 
     await ensureAudioContextAndBuffers();
     resumeAudioContextIfNeeded();

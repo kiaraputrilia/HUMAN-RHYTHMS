@@ -67,7 +67,6 @@ body.page-composition{
   text-align: center;
 }
 
-/* keep your existing styles for the composing page */
 h1 {
   position: absolute;
   top: calc(20px + env(safe-area-inset-top));
@@ -76,7 +75,23 @@ h1 {
   font-size: 24px;
   letter-spacing: 1px;
   line-height: 1.25;
-  z-index: 10; /* Ensure h1 is above the images */
+  z-index: 10;
+}
+
+/* Score line directly under title */
+.page-composition #score-line{
+  position: absolute;
+  top: calc(20px + env(safe-area-inset-top) + 62px); 
+  /* 24px font-size + ~8px breathing room */
+
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  letter-spacing: 1px;
+  z-index: 10;
+
+  user-select: none;
+  pointer-events: none;
 }
 
 #touch-area {

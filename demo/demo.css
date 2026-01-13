@@ -1,0 +1,39 @@
+body {
+  background: black;
+  color: white;
+  font-family: Helvetica, Arial, sans-serif;
+  height: 100vh;
+  margin: 0;
+  overflow: hidden;
+}
+
+button {
+  position: fixed;
+  bottom: 20px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+#spawn {
+  left: 20px;
+}
+
+#clear {
+  right: 20px;
+}
+
+/* fake “sound icons” */
+.touch-image {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background: white;
+  border-radius: 50%;
+  opacity: 1;
+  transition: opacity 900ms linear;
+}
+
+/* fade state */
+.touch-image.is-fading {
+  opacity: 0;
+}
