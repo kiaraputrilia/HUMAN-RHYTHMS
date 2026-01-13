@@ -1,16 +1,18 @@
+// Replace <S3_BASE> with your S3 bucket base if needed.
+const S3_BASE = 'https://desireinabowlofrice.s3.us-east-2.amazonaws.com/';
 const sounds = {
-    "beep.png": "beep.mp3",
-    "car.png": "car.mp3",
-    "carHorn.png": "carHorn.mp3",
-    "chatter.png": "chatter1.mp3",
-    "construction.png": "construction.mp3",
-    "dog.png": "dog.mp3",
-    "drilling.png": "drilling.mp3",
-    "keys.png": "keys.mp3",
-    "motorcycle.png": "motorcycle.mp3",
-    "siren.png": "siren.mp3",
-    "truck.png": "truck.mp3",
-    "upstairs.png": "upstairs.mp3"
+    "beep.png": S3_BASE + "beep.mp3",
+    "car.png": S3_BASE + "car.mp3",
+    "carHorn.png": S3_BASE + "carHorn.mp3",
+    "chatter.png": S3_BASE + "chatter1.mp3",
+    "construction.png": S3_BASE + "construction.mp3",
+    "dog.png": S3_BASE + "dog.mp3",
+    "drilling.png": S3_BASE + "drilling.mp3",
+    "keys.png": S3_BASE + "keys.mp3",
+    "motorcycle.png": S3_BASE + "motorcycle.mp3",
+    "siren.png": S3_BASE + "siren.mp3",
+    "truck.png": S3_BASE + "truck.mp3",
+    "upstairs.png": S3_BASE + "upstairs.mp3"
 };
 
 const images = Object.keys(sounds);
