@@ -1,3 +1,5 @@
+/* styles.css */
+
 * {
   margin: 0;
   padding: 0;
@@ -48,7 +50,7 @@ body.page-composition{
 /* keep your existing styles for the composing page */
 h1 {
   position: absolute;
-  top: 20px;
+  top: calc(20px + env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
   font-size: 24px;
@@ -76,13 +78,15 @@ h1 {
 }
 
 /* -------------------------------- */
-/* SHARED bottom-right SVG button    */
-/* (use for Start + Back buttons)    */
+/* SHARED bottom SVG buttons         */
+/* (Right: Start + Back)             */
+/* (Left: Clear)                     */
 /* -------------------------------- */
+
+/* Base shared button styling */
 .start-svg-btn,
 .corner-svg-btn{
   position: fixed;
-  right: calc(24px + env(safe-area-inset-right));
   bottom: calc(18px + env(safe-area-inset-bottom));
 
   display: inline-flex;
@@ -99,18 +103,31 @@ h1 {
   touch-action: manipulation;
 }
 
+/* Right-aligned buttons */
+.start-svg-btn,
+.corner-svg-btn.back-btn{
+  right: calc(24px + env(safe-area-inset-right));
+}
+
+/* Left-aligned button (Clear) */
+.corner-svg-btn.clear-btn{
+  left: calc(24px + env(safe-area-inset-left));
+}
+
+/* SVG sizing */
 .start-svg-btn svg,
 .corner-svg-btn svg{
   width: 100%;
   height: auto;
   display: block;
-  /* IMPORTANT: do NOT set position: fixed here */
 }
 
+/* pressed state */
 .start-svg-btn:active,
 .corner-svg-btn:active{
   transform: translate(2px, 2px);
 }
+
 
 /* * {
     margin: 0;

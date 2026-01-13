@@ -1,3 +1,5 @@
+// script.js
+
 // Replace <S3_BASE> with your S3 bucket base if needed.
 const S3_BASE = 'https://desireinabowlofrice.s3.us-east-2.amazonaws.com/';
 const sounds = {
@@ -66,22 +68,31 @@ if (!touchArea) {
 }
 
 // --------------------
-// BACK BUTTON SAFETY
+// BUTTON SAFETY (Back + Clear)
+// Stops button taps from also triggering touch canvas logic.
 // --------------------
-const backBtn = document.querySelector('.back-btn');
-if (backBtn) {
-  // Prevent touch from leaking into the sound canvas
-  backBtn.addEventListener('pointerdown', (e) => {
+function protectButtonFromCanvas(selector) {
+  const btn = document.querySelector(selector);
+  if (!btn) return;
+
+  // Prevent pointer events from leaking into the sound canvas
+  btn.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
   });
 
   // Extra guard for older iOS Safari
-  backBtn.addEventListener(
-    'touchstart',
-    (e) => e.stopPropagation(),
-    { passive: true }
-  );
+  btn.addEventListener('touchstart', (e) => {
+    e.stopPropagation();
+  }, { passive: true });
+
+  // Optional: also stop click bubbling (desktop)
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
 }
+
+protectButtonFromCanvas('.back-btn');
+protectButtonFromCanvas('.clear-btn');
 
 // --------------------
 // Audio helper
@@ -109,9 +120,7 @@ function createPlayingSource(audioSrc, initialGain = 0.2, loop = true) {
       }
     },
     stop: () => {
-      try {
-        source.stop(0);
-      } catch (err) {}
+      try { source.stop(0); } catch (err) {}
       try {
         source.disconnect();
         gainNode.disconnect();
@@ -216,6 +225,7 @@ touchArea && touchArea.addEventListener("touchcancel", (event) => {
     delete activeTouches[touch.identifier];
   }
 });
+
 
 
 
