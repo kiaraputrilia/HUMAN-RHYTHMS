@@ -5,13 +5,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Human Rhythms</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
+
 <body>
-    <h1>HUMAN RHYTHMS</h1>
-    <div id="touch-area"></div>
-    <script src="script.js"></script>
+  <h1 id="title">HUMAN RHYTHMS</h1>
+  <!-- About overlay (shows on load, can be opened via ?) -->
+  <div id="about-overlay" class="overlay">
+    <div class="about-content">
+      <p>
+        Human Rhythms originated as a book documenting ambient sounds heard along Banker Street in Brooklyn over a series of mornings in November 2022. These sounds were translated into a visual score, organized by time and volume rather than melody or authorship.
+      </p>
+      <p>
+        This mobile-only website reinterprets that system through touch. Sounds and images are triggered intuitively, layered freely, and dissolved upon release. The result is a participatory, abstract composition—shaped momentarily by those who interact with it.
+      </p>
+
+      <div class="howto">
+        <p><b>Touch</b> to trigger a sound + image.</p>
+        <p><b>Press + hold</b> to grow louder and larger.</p>
+        <p><b>Release</b> to end the sound.</p>
+        <p>Multiple touches can overlap.</p>
+      </div>
+
+      <button id="start-btn" class="btn">Start Composing</button>
+    </div>
+  </div>
+
+  <div id="touch-area"></div>
+
+  <!-- Controls (hidden until composing) -->
+  <div id="controls" class="controls hidden">
+    <button id="save-btn" class="btn">Save<br/>Sounds</button>
+    <button id="about-btn" class="btn">?</button>
+    <button id="clear-btn" class="btn">Clear<br/>Sounds</button>
+  </div>
+
+  <!-- html2canvas for Save -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="script.js"></script>
 </body>
-</html>
+
+
+
+
 
 <!-- <!DOCTYPE html>
 <html lang="en">
