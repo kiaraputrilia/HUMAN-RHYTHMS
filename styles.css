@@ -195,6 +195,28 @@ h1 {
   opacity: 0;
 }
 
+#loading-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 9998; /* below buttons (9999) but above touch-area (1) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: black;
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 1px;
+
+  user-select: none;
+  -webkit-user-select: none;
+}
+#loading-overlay.hidden{
+  display: none;
+}
+
+
 
 /* * {
     margin: 0;

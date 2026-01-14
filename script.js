@@ -1,31 +1,88 @@
-// --------------------
-// SUPABASE SCORE
-// --------------------
+// --- SUPABASE (global score counter) ---
 const SUPABASE_URL = "https://ryasxjrqxkjyukxdgfsu.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
+const SUPABASE_ANON_KEY = "YOUR_ANON_KEY_HERE";
 
 const supabaseClient =
   window.supabase?.createClient?.(SUPABASE_URL, SUPABASE_ANON_KEY) ?? null;
 
-let didIncrementScore = false;
+const scoreEl = document.getElementById("score-value");
+
+async function loadScoreOnPageLoad() {
+  if (!scoreEl) return;
+
+  if (!supabaseClient) {
+    console.warn("Supabase client not available (CDN script not loaded?)");
+    scoreEl.textContent = "—";
+    return;
+  }
+
+  try {
+    const { data, error } = await supabaseClient
+      .from("counter")
+      .select("value")
+      .eq("id", 1)
+      .single();
+
+    if (error) throw error;
+    scoreEl.textContent = String(data.value);
+  } catch (err) {
+    console.error("Failed to load score:", err);
+    scoreEl.textContent = "—";
+  }
+}
 
 async function incrementScoreOncePerSession() {
-  const scoreEl = document.getElementById("score-value");
   if (!scoreEl) return;
-  if (didIncrementScore) return;
+  if (sessionStorage.getItem("hr_scored") === "1") return;
 
-  if (!supabaseClient) return;
+  if (!supabaseClient) {
+    console.warn("Supabase client not available (CDN script not loaded?)");
+    return;
+  }
 
   try {
     const { data, error } = await supabaseClient.rpc("increment_counter");
     if (error) throw error;
 
     scoreEl.textContent = String(data);
-    didIncrementScore = true;
+    sessionStorage.setItem("hr_scored", "1");
   } catch (err) {
-    console.error(err);
+    console.error("Failed to increment score:", err);
   }
 }
+
+
+// LOADING OVERLAY 
+
+const loadingOverlay = document.getElementById("loading-overlay");
+
+// Preload the PNGs so first touch shows visuals faster
+function preloadImages() {
+  const imgPromises = images.map((src) => {
+    return new Promise((resolve) => {
+      const im = new Image();
+      im.onload = resolve;
+      im.onerror = resolve; // don't block forever
+      im.src = src;
+    });
+  });
+  return Promise.all(imgPromises);
+}
+
+// Show loading immediately
+if (loadingOverlay) loadingOverlay.classList.remove("hidden");
+
+// Preload images on load
+preloadImages().then(() => {
+  // We *can* hide after images, but audio still loads on first tap.
+  // So keep overlay until the first touch initializes audio.
+  // (We'll hide it right after audio buffers finish loading.)
+});
+
+
+// Load score as soon as the page is ready
+document.addEventListener("DOMContentLoaded", loadScoreOnPageLoad);
+
 
 // --------------------
 // AUDIO + ASSETS
@@ -100,6 +157,21 @@ function createPlayingSource(src) {
 }
 
 // --------------------
+// LOADING OVERLAY HELPERS
+// --------------------
+const loadingEl = document.getElementById("loading"); // your overlay element
+let isLoadingAudio = false;
+
+function showLoading() {
+  if (loadingEl) loadingEl.classList.remove("hidden");
+}
+
+function hideLoading() {
+  if (loadingEl) loadingEl.classList.add("hidden");
+}
+
+
+// --------------------
 // TOUCH SURFACE
 // --------------------
 const touchArea = document.getElementById("touch-area");
@@ -109,10 +181,24 @@ touchArea.addEventListener(
   async (event) => {
     event.preventDefault();
 
+     // ✅ if we’re already loading, ignore touches
+    if (isLoadingAudio) return;
+
     incrementScoreOncePerSession();
 
-    await ensureAudioContextAndBuffers();
+        // ✅ start loading UI BEFORE awaiting
+    isLoadingAudio = true;
+    showLoading();
+
+        try {
+        await ensureAudioContextAndBuffers();
     resumeAudio();
+
+    } finally {
+      // ✅ always hide even if something errors
+      hideLoading();
+      isLoadingAudio = false;
+    }
 
     for (const touch of event.changedTouches) {
       const id = touch.identifier;
@@ -182,7 +268,17 @@ touchArea.addEventListener("touchcancel", (event) => {
 // --------------------
 const clearBtn = document.querySelector(".clear-btn");
 
-function clearVisualsDissolve(duration = 12000) {
+if (clearBtn) {
+  clearBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const randomMs = Math.floor(5000 + Math.random() * 5000); // 5–10 seconds
+    clearVisualsDissolve(randomMs);
+  });
+}
+
+function clearVisualsDissolve(duration = 8000) {
   const imgs = Array.from(document.querySelectorAll(".touch-image"));
   if (!imgs.length) return;
 
