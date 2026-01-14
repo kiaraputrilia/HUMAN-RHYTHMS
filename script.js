@@ -86,36 +86,36 @@ const images = Object.keys(sounds);
 // =============================
 // LOADING OVERLAY
 // =============================
-const loadingOverlay = document.getElementById("loading-overlay");
+// const loadingOverlay = document.getElementById("loading-overlay");
 
 // Overlay starts visible by default (in CSS you can choose hidden or not)
 // We will explicitly show it here for safety:
-function showLoading() {
-  if (loadingOverlay) loadingOverlay.classList.remove("hidden");
-}
-function hideLoading() {
-  if (loadingOverlay) loadingOverlay.classList.add("hidden");
-}
+// function showLoading() {
+//   if (loadingOverlay) loadingOverlay.classList.remove("hidden");
+// }
+// function hideLoading() {
+//   if (loadingOverlay) loadingOverlay.classList.add("hidden");
+// }
 
 // Start with loading visible
-showLoading();
+// showLoading();
 
 // Preload PNGs so visuals appear faster on first touch
-function preloadImages() {
-  return Promise.all(
-    images.map((src) => {
-      return new Promise((resolve) => {
-        const im = new Image();
-        im.onload = resolve;
-        im.onerror = resolve;
-        im.src = src;
-      });
-    })
-  );
-}
+// function preloadImages() {
+//   return Promise.all(
+//     images.map((src) => {
+//       return new Promise((resolve) => {
+//         const im = new Image();
+//         im.onload = resolve;
+//         im.onerror = resolve;
+//         im.src = src;
+//       });
+//     })
+//   );
+// }
 
 // Start preloading immediately (does NOT hide overlay yet)
-preloadImages().catch(() => {});
+// preloadImages().catch(() => {});
 
 // =============================
 // WEB AUDIO SETUP
@@ -291,14 +291,15 @@ touchArea &&
         // increment score on first interaction (once per tab session)
         incrementScoreOncePerSession();
 
-        try {
-          await ensureAudioContextAndBuffers();
-          resumeAudio();
-        } finally {
-          hideLoading();
-          isReady = true;
-          isInitializing = false;
-        }
+        // try {
+        //   await ensureAudioContextAndBuffers();
+        //   resumeAudio();
+        // } finally {
+        //   hideLoading();
+        //   isReady = true;
+        //   isInitializing = false;
+        // }
+        
       } else if (!isReady && isInitializing) {
         // ignore extra touches while loading
         return;

@@ -151,10 +151,10 @@ h1 {
 /* -------------------------------- */
 /* LOADING OVERLAY                  */
 /* -------------------------------- */
-#loading-overlay{
+/* #loading-overlay{
   position: fixed;
   inset: 0;
-  z-index: 9998; /* below buttons (9999) but above touch-area (1) */
+  z-index: 9998;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -171,7 +171,7 @@ h1 {
 
 #loading-overlay.hidden{
   display: none;
-}
+} */
 
 
 
