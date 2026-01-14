@@ -194,3 +194,60 @@ h1 {
 .touch-image.is-fading{
   opacity: 0;
 }
+
+
+/* * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: black;
+    color: #dddcc9;
+    font-family: Helvetica, Arial, sans-serif;
+    overflow: hidden;
+    text-align: center;
+}
+
+#title {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    letter-spacing: 2px;
+    z-index: 10; 
+    pointer-events: none; 
+}
+
+#touch-area {
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    background-color: black;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#controls {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+    font-size: 18px;
+    letter-spacing: 1px;
+    z-index: 10; 
+
+.button {
+    cursor: pointer;
+    color: #47775d;
+    background-color: #dddcc9;
+    padding: 10px 20px;
+    border-radius: 5px;
+    border: 2px solid #47775d;
+    user-select: none; 
+} */
