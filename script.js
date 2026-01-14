@@ -14,7 +14,9 @@ async function loadScoreOnPageLoad() {
   if (!scoreEl) return;
 
   if (!supabaseClient) {
-    console.warn("Supabase client not available (did you include the CDN script?)");
+    console.warn(
+      "Supabase client not available (did you include the CDN script?)"
+    );
     scoreEl.textContent = "—";
     return;
   }
@@ -39,7 +41,9 @@ async function incrementScoreOncePerSession() {
   if (sessionStorage.getItem("hr_scored") === "1") return;
 
   if (!supabaseClient) {
-    console.warn("Supabase client not available (CDN script not loaded?)");
+    console.warn(
+      "Supabase client not available (CDN script not loaded?)"
+    );
     return;
   }
 
@@ -84,40 +88,6 @@ const sounds = {
 const images = Object.keys(sounds);
 
 // =============================
-// LOADING OVERLAY
-// =============================
-// const loadingOverlay = document.getElementById("loading-overlay");
-
-// Overlay starts visible by default (in CSS you can choose hidden or not)
-// We will explicitly show it here for safety:
-// function showLoading() {
-//   if (loadingOverlay) loadingOverlay.classList.remove("hidden");
-// }
-// function hideLoading() {
-//   if (loadingOverlay) loadingOverlay.classList.add("hidden");
-// }
-
-// Start with loading visible
-// showLoading();
-
-// Preload PNGs so visuals appear faster on first touch
-// function preloadImages() {
-//   return Promise.all(
-//     images.map((src) => {
-//       return new Promise((resolve) => {
-//         const im = new Image();
-//         im.onload = resolve;
-//         im.onerror = resolve;
-//         im.src = src;
-//       });
-//     })
-//   );
-// }
-
-// Start preloading immediately (does NOT hide overlay yet)
-// preloadImages().catch(() => {});
-
-// =============================
 // WEB AUDIO SETUP
 // =============================
 let audioContext = null;
@@ -158,8 +128,14 @@ function resumeAudio() {
 function createPlayingSource(audioSrc, initialGain = 0.2, loop = true) {
   if (!audioContext) return null;
 
+  const buffer = audioBuffers[audioSrc];
+  if (!buffer) {
+    console.warn("Audio buffer missing for:", audioSrc);
+    return null;
+  }
+
   const source = audioContext.createBufferSource();
-  source.buffer = audioBuffers[audioSrc] || null;
+  source.buffer = buffer;
   source.loop = loop;
 
   const gainNode = audioContext.createGain();
@@ -197,9 +173,22 @@ const activeTouches = {};
 const maxSize = 1000;
 const growthRate = 80;
 
-// This prevents multiple “first touch” inits from stacking
-let isReady = false;
-let isInitializing = false;
+// ✅ ONE-TIME INIT (prevents “works once then stops”)
+let initPromise = null;
+function initOnceOnFirstTouch() {
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
+    // increment score on first interaction (once per tab session)
+    await incrementScoreOncePerSession();
+
+    // load audio buffers + resume context
+    await ensureAudioContextAndBuffers();
+    resumeAudio();
+  })();
+
+  return initPromise;
+}
 
 // =============================
 // BUTTON SAFETY (Back + Clear)
@@ -209,16 +198,27 @@ function protectLinkFromCanvas(selector) {
   if (!el) return;
 
   // stop touch from triggering the canvas logic
-  el.addEventListener("touchstart", (e) => {
-    e.stopPropagation();
-  }, { passive: true });
+  el.addEventListener(
+    "touchstart",
+    (e) => {
+      e.stopPropagation();
+    },
+    { passive: true }
+  );
 
+  // also stop pointer/mouse bubbling if it ever happens
   el.addEventListener("pointerdown", (e) => {
+    e.stopPropagation();
+  });
+
+  // stop click bubble on desktop
+  el.addEventListener("click", (e) => {
     e.stopPropagation();
   });
 }
 
 protectLinkFromCanvas(".back-btn");
+protectLinkFromCanvas(".clear-btn");
 
 // =============================
 // CLEAR (dissolve visuals)
@@ -245,7 +245,7 @@ function clearVisualsDissolve(durationMs = 8000) {
   imgs.forEach((img, i) => {
     setTimeout(() => {
       img.classList.add("is-fading");
-      setTimeout(() => img.remove(), 950); // matches CSS transition ~900ms
+      setTimeout(() => img.remove(), 950); // matches CSS transition (~900ms)
     }, i * step);
   });
 }
@@ -272,7 +272,7 @@ if (clearBtn) {
 
     const randomMs = Math.floor(5000 + Math.random() * 5000);
     clearVisualsDissolve(randomMs);
-  });
+    });
 }
 
 // =============================
@@ -284,28 +284,14 @@ touchArea &&
     async (event) => {
       event.preventDefault();
 
-      // First-touch init (audio + hide overlay)
-      if (!isReady && !isInitializing) {
-        isInitializing = true;
-
-        // increment score on first interaction (once per tab session)
-        incrementScoreOncePerSession();
-
-        // try {
-        //   await ensureAudioContextAndBuffers();
-        //   resumeAudio();
-        // } finally {
-        //   hideLoading();
-        //   isReady = true;
-        //   isInitializing = false;
-        // }
-        
-      } else if (!isReady && isInitializing) {
-        // ignore extra touches while loading
+      // ✅ Make sure audio is ready (loads once, never gets stuck)
+      try {
+        await initOnceOnFirstTouch();
+      } catch (e) {
+        console.error("Init failed:", e);
         return;
       }
 
-      // normal touch behavior
       for (const touch of event.changedTouches) {
         const id = touch.identifier;
         if (activeTouches[id]) continue;
@@ -316,6 +302,7 @@ touchArea &&
         const imgSrc = images[Math.floor(Math.random() * images.length)];
         const audioSrc = sounds[imgSrc];
 
+        // create visual
         const img = document.createElement("img");
         img.src = imgSrc;
         img.className = "touch-image";
@@ -324,9 +311,11 @@ touchArea &&
         img.style.top = `${y - 20}px`;
         document.body.appendChild(img);
 
+        // create audio
         const audioNode = createPlayingSource(audioSrc, 0.2, true);
         audioNode?.start();
 
+        // animate / grow
         let rotationAngle = 0;
         const spinSpeed = Math.random() * 6 + 2;
         const startTime = Date.now();
@@ -376,6 +365,7 @@ touchArea &&
       delete activeTouches[touch.identifier];
     }
   });
+
 
 
 
