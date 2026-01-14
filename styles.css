@@ -7,27 +7,12 @@
 /* Default body (safe baseline) */
 body{
   font-family: Helvetica, Arial, sans-serif;
-  overflow: hidden; /* Ensure no scrolling */
+  overflow: hidden;
   color: white;
 }
 
-/* unvisited link */
-a:link {
-  color: white;
-}
-
-/* visited link */
-a:visited {
-  color: white;
-}
-
-/* mouse over link */
-a:hover {
-  color: white;
-}
-
-/* selected link */
-a:active {
+/* links always white */
+a:link, a:visited, a:hover, a:active{
   color: white;
 }
 
@@ -37,19 +22,16 @@ a:active {
 body.page-index{
   background-color: #2e7656;
   text-align: left;
-
-  /* Helvetica Bold */
   font-weight: 700;
-  font-size: 14pt; /* you changed from 8 -> 14pt */
+  font-size: 14pt;
   line-height: 1.25;
 }
 
-/* wrapper for your index text */
 .page-index .copy{
   padding-top: calc(44px + env(safe-area-inset-top));
   padding-left: calc(34px + env(safe-area-inset-left));
   padding-right: calc(28px + env(safe-area-inset-right));
-  padding-bottom: calc(90px + env(safe-area-inset-bottom)); /* space for button */
+  padding-bottom: calc(90px + env(safe-area-inset-bottom));
   max-width: 430px;
 }
 
@@ -58,14 +40,12 @@ body.page-index{
 }
 
 /* -------------------------------- */
-/* COMPOSITION (black) */
+/* COMPOSITION (black)              */
 /* -------------------------------- */
 body.page-composition{
   background-color: black;
   text-align: center;
-}
 
-body.page-composition{
   user-select: none;
   -webkit-user-select: none;
 }
@@ -81,57 +61,50 @@ h1 {
   z-index: 10;
 }
 
-/* Score line directly under title */
+/* Score line under title */
 .page-composition #score-line{
   position: absolute;
-  top: calc(20px + env(safe-area-inset-top) + 62px); 
-  /* 24px font-size + ~8px breathing room */
-
+  top: calc(20px + env(safe-area-inset-top) + 62px);
   left: 50%;
   transform: translateX(-50%);
   font-size: 14px;
   letter-spacing: 1px;
   z-index: 10;
-
   user-select: none;
   pointer-events: none;
 }
 
-/* #touch-area {
-  width: 100vw;
-  height: 100vh;
-  position: absolute;
-  top: 0;
-  left: 0;
-  overflow: hidden; 
-  z-index: 1; 
-} */
-
-#touch-area {
-  position: fixed;              /* IMPORTANT: fixed, not absolute */
-  inset: 0;                     /* top:0 right:0 bottom:0 left:0 */
+/* Touch area full screen */
+#touch-area{
+  position: fixed;
+  inset: 0;
   width: 100vw;
   height: 100vh;
   z-index: 1;
-  touch-action: none;           /* IMPORTANT: allows preventDefault on pointer events */
+  touch-action: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-.touch-image {
+/* touch images */
+.touch-image{
   position: absolute;
   transform-origin: center;
   pointer-events: none;
-  object-fit: contain; /* Ensures images don’t get squished */
-  z-index: 5; /* Ensure images are below h1 */
+  object-fit: contain;
+  z-index: 5;
+
+  /* dissolve transition */
+  transition: opacity 900ms linear;
+  opacity: 1;
+}
+.touch-image.is-fading{
+  opacity: 0;
 }
 
 /* -------------------------------- */
 /* SHARED bottom SVG buttons         */
-/* (Right: Start + Back)             */
-/* (Left: Clear)                     */
 /* -------------------------------- */
 
-/* Base shared button styling */
 .start-svg-btn,
 .corner-svg-btn{
   position: fixed;
@@ -141,28 +114,28 @@ h1 {
   align-items: center;
   justify-content: center;
 
-  width: 120px;           /* tweak as needed */
+  width: 120px;
   height: auto;
 
-  z-index: 9999;          /* always above touch area + images */
+  z-index: 9999;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   text-decoration: none;
   touch-action: manipulation;
+  pointer-events: auto;
 }
 
-/* Right-aligned buttons */
+/* right aligned */
 .start-svg-btn,
 .corner-svg-btn.back-btn{
   right: calc(24px + env(safe-area-inset-right));
 }
 
-/* Left-aligned button (Clear) */
+/* left aligned */
 .corner-svg-btn.clear-btn{
   left: calc(24px + env(safe-area-inset-left));
 }
 
-/* SVG sizing */
 .start-svg-btn svg,
 .corner-svg-btn svg{
   width: 100%;
@@ -170,31 +143,14 @@ h1 {
   display: block;
 }
 
-/* pressed state */
 .start-svg-btn:active,
 .corner-svg-btn:active{
   transform: translate(2px, 2px);
 }
 
-/* when clearing */
-.touch-image.is-fading{
-  opacity: 0;
-}
-
-/* make sure the buttons always receive taps */
-.corner-svg-btn{
-  pointer-events: auto;
-}
-
-/* Smooth dissolve */
-.touch-image{
-  transition: opacity 900ms linear;
-  opacity: 1;
-}
-.touch-image.is-fading{
-  opacity: 0;
-}
-
+/* -------------------------------- */
+/* LOADING OVERLAY                  */
+/* -------------------------------- */
 #loading-overlay{
   position: fixed;
   inset: 0;
@@ -212,6 +168,7 @@ h1 {
   user-select: none;
   -webkit-user-select: none;
 }
+
 #loading-overlay.hidden{
   display: none;
 }

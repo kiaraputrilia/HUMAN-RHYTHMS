@@ -1,6 +1,9 @@
-// --- SUPABASE (global score counter) ---
+// =============================
+// SUPABASE (global score counter)
+// =============================
 const SUPABASE_URL = "https://ryasxjrqxkjyukxdgfsu.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR_ANON_KEY_HERE";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ5YXN4anJxeGtqeXVreGRnZnN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMjIxMTQsImV4cCI6MjA4Mzg5ODExNH0.Jl1XlUojJEbZ9m8pQ33yocDFfC0CZSMhppSk5BI-a9g";
 
 const supabaseClient =
   window.supabase?.createClient?.(SUPABASE_URL, SUPABASE_ANON_KEY) ?? null;
@@ -11,7 +14,7 @@ async function loadScoreOnPageLoad() {
   if (!scoreEl) return;
 
   if (!supabaseClient) {
-    console.warn("Supabase client not available (CDN script not loaded?)");
+    console.warn("Supabase client not available (did you include the CDN script?)");
     scoreEl.textContent = "—";
     return;
   }
@@ -41,6 +44,7 @@ async function incrementScoreOncePerSession() {
   }
 
   try {
+    // Atomic increment via RPC
     const { data, error } = await supabaseClient.rpc("increment_counter");
     if (error) throw error;
 
@@ -51,42 +55,16 @@ async function incrementScoreOncePerSession() {
   }
 }
 
-
-// LOADING OVERLAY 
-
-const loadingOverlay = document.getElementById("loading-overlay");
-
-// Preload the PNGs so first touch shows visuals faster
-function preloadImages() {
-  const imgPromises = images.map((src) => {
-    return new Promise((resolve) => {
-      const im = new Image();
-      im.onload = resolve;
-      im.onerror = resolve; // don't block forever
-      im.src = src;
-    });
-  });
-  return Promise.all(imgPromises);
+// Load score ASAP (works whether script is at bottom or not)
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", loadScoreOnPageLoad);
+} else {
+  loadScoreOnPageLoad();
 }
 
-// Show loading immediately
-if (loadingOverlay) loadingOverlay.classList.remove("hidden");
-
-// Preload images on load
-preloadImages().then(() => {
-  // We *can* hide after images, but audio still loads on first tap.
-  // So keep overlay until the first touch initializes audio.
-  // (We'll hide it right after audio buffers finish loading.)
-});
-
-
-// Load score as soon as the page is ready
-document.addEventListener("DOMContentLoaded", loadScoreOnPageLoad);
-
-
-// --------------------
-// AUDIO + ASSETS
-// --------------------
+// =============================
+// ASSETS
+// =============================
 const S3_BASE = "https://desireinabowlofrice.s3.us-east-2.amazonaws.com/";
 const sounds = {
   "beep.png": S3_BASE + "beep.mp3",
@@ -104,10 +82,44 @@ const sounds = {
 };
 
 const images = Object.keys(sounds);
-const activeTouches = {};
-const maxSize = 1000;
-const growthRate = 80;
 
+// =============================
+// LOADING OVERLAY
+// =============================
+const loadingOverlay = document.getElementById("loading-overlay");
+
+// Overlay starts visible by default (in CSS you can choose hidden or not)
+// We will explicitly show it here for safety:
+function showLoading() {
+  if (loadingOverlay) loadingOverlay.classList.remove("hidden");
+}
+function hideLoading() {
+  if (loadingOverlay) loadingOverlay.classList.add("hidden");
+}
+
+// Start with loading visible
+showLoading();
+
+// Preload PNGs so visuals appear faster on first touch
+function preloadImages() {
+  return Promise.all(
+    images.map((src) => {
+      return new Promise((resolve) => {
+        const im = new Image();
+        im.onload = resolve;
+        im.onerror = resolve;
+        im.src = src;
+      });
+    })
+  );
+}
+
+// Start preloading immediately (does NOT hide overlay yet)
+preloadImages().catch(() => {});
+
+// =============================
+// WEB AUDIO SETUP
+// =============================
 let audioContext = null;
 const audioBuffers = {};
 let audioLoadPromise = null;
@@ -121,9 +133,13 @@ async function ensureAudioContextAndBuffers() {
   audioLoadPromise = Promise.all(
     Object.values(sounds).map(async (src) => {
       if (audioBuffers[src]) return;
-      const res = await fetch(src);
-      const buf = await res.arrayBuffer();
-      audioBuffers[src] = await audioContext.decodeAudioData(buf);
+      try {
+        const res = await fetch(src);
+        const buf = await res.arrayBuffer();
+        audioBuffers[src] = await audioContext.decodeAudioData(buf);
+      } catch (err) {
+        console.error("Failed to load/decode audio:", src, err);
+      }
     })
   );
 
@@ -131,184 +147,234 @@ async function ensureAudioContextAndBuffers() {
 }
 
 function resumeAudio() {
-  if (audioContext?.state === "suspended") {
-    audioContext.resume();
+  if (!audioContext) return;
+  if (audioContext.state === "suspended") {
+    audioContext.resume().catch((e) =>
+      console.warn("AudioContext resume failed:", e)
+    );
   }
 }
 
-function createPlayingSource(src) {
+function createPlayingSource(audioSrc, initialGain = 0.2, loop = true) {
+  if (!audioContext) return null;
+
   const source = audioContext.createBufferSource();
-  source.buffer = audioBuffers[src];
-  source.loop = true;
+  source.buffer = audioBuffers[audioSrc] || null;
+  source.loop = loop;
 
-  const gain = audioContext.createGain();
-  gain.gain.value = 0.2;
+  const gainNode = audioContext.createGain();
+  gainNode.gain.value = initialGain;
 
-  source.connect(gain).connect(audioContext.destination);
+  source.connect(gainNode).connect(audioContext.destination);
 
   return {
     source,
-    gain,
-    start: () => source.start(),
+    gainNode,
+    start: () => {
+      try {
+        source.start(0);
+      } catch (err) {
+        console.warn("BufferSource start failed:", err);
+      }
+    },
     stop: () => {
-      try { source.stop(); } catch {}
+      try { source.stop(0); } catch {}
+      try {
+        source.disconnect();
+        gainNode.disconnect();
+      } catch {}
     }
   };
 }
 
-// --------------------
-// LOADING OVERLAY HELPERS
-// --------------------
-const loadingEl = document.getElementById("loading"); // your overlay element
-let isLoadingAudio = false;
-
-function showLoading() {
-  if (loadingEl) loadingEl.classList.remove("hidden");
-}
-
-function hideLoading() {
-  if (loadingEl) loadingEl.classList.add("hidden");
-}
-
-
-// --------------------
-// TOUCH SURFACE
-// --------------------
+// =============================
+// TOUCH / VISUALS LOGIC
+// =============================
 const touchArea = document.getElementById("touch-area");
+if (!touchArea) console.error('Element with id "touch-area" not found.');
 
-touchArea.addEventListener(
-  "touchstart",
-  async (event) => {
-    event.preventDefault();
+const activeTouches = {};
+const maxSize = 1000;
+const growthRate = 80;
 
-     // ✅ if we’re already loading, ignore touches
-    if (isLoadingAudio) return;
+// This prevents multiple “first touch” inits from stacking
+let isReady = false;
+let isInitializing = false;
 
-    incrementScoreOncePerSession();
+// =============================
+// BUTTON SAFETY (Back + Clear)
+// =============================
+function protectLinkFromCanvas(selector) {
+  const el = document.querySelector(selector);
+  if (!el) return;
 
-        // ✅ start loading UI BEFORE awaiting
-    isLoadingAudio = true;
-    showLoading();
-
-        try {
-        await ensureAudioContextAndBuffers();
-    resumeAudio();
-
-    } finally {
-      // ✅ always hide even if something errors
-      hideLoading();
-      isLoadingAudio = false;
-    }
-
-    for (const touch of event.changedTouches) {
-      const id = touch.identifier;
-      if (activeTouches[id]) continue;
-
-      const x = touch.clientX;
-      const y = touch.clientY;
-
-      const imgSrc = images[Math.floor(Math.random() * images.length)];
-      const audioSrc = sounds[imgSrc];
-
-      const img = document.createElement("img");
-      img.src = imgSrc;
-      img.className = "touch-image";
-      img.style.width = "40px";
-      img.style.left = `${x - 20}px`;
-      img.style.top = `${y - 20}px`;
-      document.body.appendChild(img);
-
-      const audio = createPlayingSource(audioSrc);
-      audio.start();
-
-      const startTime = Date.now();
-      const spin = Math.random() * 6 + 2;
-
-      const interval = setInterval(() => {
-        const t = (Date.now() - startTime) / 1000;
-        const size = Math.min(40 + t * growthRate, maxSize);
-
-        img.style.width = `${size}px`;
-        img.style.left = `${x - size / 2}px`;
-        img.style.top = `${y - size / 2}px`;
-        img.style.transform = `rotate(${spin * t}deg)`;
-        audio.gain.gain.value = Math.min(1, 0.2 + t * 0.1);
-      }, 50);
-
-      activeTouches[id] = { img, audio, interval };
-    }
-  },
-  { passive: false }
-);
-
-touchArea.addEventListener("touchend", (event) => {
-  for (const touch of event.changedTouches) {
-    const entry = activeTouches[touch.identifier];
-    if (!entry) continue;
-
-    clearInterval(entry.interval);
-    entry.audio.stop();
-    delete activeTouches[touch.identifier];
-  }
-});
-
-touchArea.addEventListener("touchcancel", (event) => {
-  for (const touch of event.changedTouches) {
-    const entry = activeTouches[touch.identifier];
-    if (!entry) continue;
-
-    clearInterval(entry.interval);
-    entry.audio.stop();
-    delete activeTouches[touch.identifier];
-  }
-});
-
-// --------------------
-// CLEAR SOUNDS (DISSOLVE)
-// --------------------
-const clearBtn = document.querySelector(".clear-btn");
-
-if (clearBtn) {
-  clearBtn.addEventListener("click", (e) => {
-    e.preventDefault();
+  // stop touch from triggering the canvas logic
+  el.addEventListener("touchstart", (e) => {
     e.stopPropagation();
+  }, { passive: true });
 
-    const randomMs = Math.floor(5000 + Math.random() * 5000); // 5–10 seconds
-    clearVisualsDissolve(randomMs);
+  el.addEventListener("pointerdown", (e) => {
+    e.stopPropagation();
   });
 }
 
-function clearVisualsDissolve(duration = 8000) {
+protectLinkFromCanvas(".back-btn");
+
+// =============================
+// CLEAR (dissolve visuals)
+// =============================
+function clearVisualsDissolve(durationMs = 8000) {
   const imgs = Array.from(document.querySelectorAll(".touch-image"));
   if (!imgs.length) return;
 
-  Object.values(activeTouches).forEach((t) => {
-    clearInterval(t.interval);
-    t.audio.stop();
+  // stop all active audio + timers
+  Object.keys(activeTouches).forEach((id) => {
+    const entry = activeTouches[id];
+    if (!entry) return;
+    clearInterval(entry.interval);
+    entry.audioNode?.stop();
+    delete activeTouches[id];
   });
 
+  // randomize removal order
   imgs.sort(() => Math.random() - 0.5);
-  const step = Math.max(40, duration / imgs.length);
+
+  // spread fades across total duration
+  const step = Math.max(40, Math.floor(durationMs / imgs.length));
 
   imgs.forEach((img, i) => {
     setTimeout(() => {
       img.classList.add("is-fading");
-      setTimeout(() => img.remove(), 900);
+      setTimeout(() => img.remove(), 950); // matches CSS transition ~900ms
     }, i * step);
   });
 }
 
+const clearBtn = document.querySelector(".clear-btn");
 if (clearBtn) {
+  // mobile-first: touchstart
   clearBtn.addEventListener(
     "touchstart",
     (e) => {
       e.preventDefault();
       e.stopPropagation();
-      clearVisualsDissolve();
+
+      const randomMs = Math.floor(5000 + Math.random() * 5000); // 5–10s
+      clearVisualsDissolve(randomMs);
     },
     { passive: false }
   );
+
+  // desktop fallback
+  clearBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const randomMs = Math.floor(5000 + Math.random() * 5000);
+    clearVisualsDissolve(randomMs);
+  });
 }
+
+// =============================
+// TOUCH HANDLERS
+// =============================
+touchArea &&
+  touchArea.addEventListener(
+    "touchstart",
+    async (event) => {
+      event.preventDefault();
+
+      // First-touch init (audio + hide overlay)
+      if (!isReady && !isInitializing) {
+        isInitializing = true;
+
+        // increment score on first interaction (once per tab session)
+        incrementScoreOncePerSession();
+
+        try {
+          await ensureAudioContextAndBuffers();
+          resumeAudio();
+        } finally {
+          hideLoading();
+          isReady = true;
+          isInitializing = false;
+        }
+      } else if (!isReady && isInitializing) {
+        // ignore extra touches while loading
+        return;
+      }
+
+      // normal touch behavior
+      for (const touch of event.changedTouches) {
+        const id = touch.identifier;
+        if (activeTouches[id]) continue;
+
+        const x = touch.clientX;
+        const y = touch.clientY;
+
+        const imgSrc = images[Math.floor(Math.random() * images.length)];
+        const audioSrc = sounds[imgSrc];
+
+        const img = document.createElement("img");
+        img.src = imgSrc;
+        img.className = "touch-image";
+        img.style.width = "40px";
+        img.style.left = `${x - 20}px`;
+        img.style.top = `${y - 20}px`;
+        document.body.appendChild(img);
+
+        const audioNode = createPlayingSource(audioSrc, 0.2, true);
+        audioNode?.start();
+
+        let rotationAngle = 0;
+        const spinSpeed = Math.random() * 6 + 2;
+        const startTime = Date.now();
+
+        const interval = setInterval(() => {
+          const t = (Date.now() - startTime) / 1000;
+          const size = Math.min(40 + t * growthRate, maxSize);
+
+          rotationAngle += spinSpeed;
+
+          img.style.width = `${size}px`;
+          img.style.left = `${x - size / 2}px`;
+          img.style.top = `${y - size / 2}px`;
+          img.style.transform = `rotate(${rotationAngle}deg)`;
+
+          if (audioNode?.gainNode) {
+            audioNode.gainNode.gain.value = Math.min(1, 0.2 + t * 0.1);
+          }
+        }, 50);
+
+        activeTouches[id] = { img, audioNode, interval };
+      }
+    },
+    { passive: false }
+  );
+
+touchArea &&
+  touchArea.addEventListener("touchend", (event) => {
+    for (const touch of event.changedTouches) {
+      const entry = activeTouches[touch.identifier];
+      if (!entry) continue;
+
+      clearInterval(entry.interval);
+      entry.audioNode?.stop();
+      delete activeTouches[touch.identifier];
+    }
+  });
+
+touchArea &&
+  touchArea.addEventListener("touchcancel", (event) => {
+    for (const touch of event.changedTouches) {
+      const entry = activeTouches[touch.identifier];
+      if (!entry) continue;
+
+      clearInterval(entry.interval);
+      entry.audioNode?.stop();
+      delete activeTouches[touch.identifier];
+    }
+  });
 
 
 
